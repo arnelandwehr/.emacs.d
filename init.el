@@ -1,4 +1,4 @@
-					; package manager
+;; package manager
 (require 'package)
 (setq package-enable-at-startup nil)   ; To prevent initialising twice
 (setq package-archives '(("org"       . "http://orgmode.org/elpa/")
@@ -8,8 +8,7 @@
 
 (package-initialize)
 
-					; use-package
-
+;; use-package
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
@@ -22,7 +21,7 @@
 (use-package use-package-chords
   :config (key-chord-mode 1))
 
-					; package
+;; package
 (use-package chords
   :chords ("ää" . prelude-duplicate-current-line-or-region))
 
@@ -152,7 +151,7 @@
 (fset 'yes-or-no-p 'y-or-n-p)
 
 (menu-bar-mode -1)
-  
+
 (global-set-key (kbd "M-i") 'indent-region-or-buffer)
 
 (global-set-key (kbd "M-/") 'delete-horizontal-space)
