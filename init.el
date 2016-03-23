@@ -22,9 +22,6 @@
   :config (key-chord-mode 1))
 
 ;; package
-(use-package chords
-  :chords ("ää" . prelude-duplicate-current-line-or-region))
-
 (use-package magit
   :ensure t)
 
@@ -65,12 +62,15 @@
   (smartparens-global-mode t)
   (show-smartparens-global-mode t))
 
+
 (use-package ensime
   :ensure t
   :commands ensime ensime-mode
   :config
   (add-hook 'scala-mode-hook 'ensime-mode)
   (add-hook 'scala-mode-hook 'linum-mode)
+  (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-generic-expression '(("test" "^.*\\(it.*\\).*" 1)))))
+  (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-create-index-function (lambda () (append (imenu-default-create-index-function) (ensime-imenu-index-function))))))
   :bind (("M-ö" . ensime-company)))
 
 (use-package expand-region
@@ -132,7 +132,7 @@
   (global-set-key (kbd "ESC <up>") 'back-button-global-forward)
   (global-set-key (kbd "ESC <down>") 'back-button-global-backward))
 
-					; hippie expand is dabbrev expand on steroids
+;; hippie expand is dabbrev expand on steroids
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
 					 try-expand-dabbrev-all-buffers
 					 try-expand-dabbrev-from-kill
@@ -144,6 +144,7 @@
 					 try-complete-lisp-symbol-partially
 					 try-complete-lisp-symbol))
 
+
 (global-set-key (kbd "M-j") 'hippie-expand)
 
 (setq sentence-end-double-space nil)
@@ -152,13 +153,13 @@
 
 (menu-bar-mode -1)
 
-(global-set-key (kbd "M-i") 'indent-region-or-buffer)
+(global-set-key (kbd "M-I") 'indent-region-or-buffer)
 
 (global-set-key (kbd "M-/") 'delete-horizontal-space)
 
 (bind-chord "zz" 'delete-indentation)
 
-(bind-chord "kk" 'other-window)
+(bind-chord "kk" 'ace-window)
 
 (bind-chord "xx" 'delete-window)
 
@@ -166,10 +167,19 @@
 
 (setq linum-format "%7d   ")
 
+(global-set-key (kbd "M-y") 'helm-show-kill-ring)
+
 (setq backup-directory-alist
       `((".*" . ,temporary-file-directory)))
 (setq auto-save-file-name-transforms
       `((".*" ,temporary-file-directory t)))
+
+
+(global-set-key (kbd "M-e") 'helm-projectile-find-file)
+
+(global-set-key (kbd "M--") 'comment-or-uncomment-region)
+
+(bind-chord "ää" 'prelude-duplicate-current-line-or-region)
 
 (defun smart-open-line ()
   "Insert an empty line after the current line.
@@ -261,9 +271,56 @@ or region."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-faces-vector
+   [default default default italic underline success warning error])
+ '(ansi-color-names-vector
+   ["#272822" "#F92672" "#A6E22E" "#E6DB74" "#66D9EF" "#FD5FF0" "#A1EFE4" "#F8F8F2"])
+ '(compilation-message-face (quote default))
  '(custom-safe-themes
    (quote
-    ("316d29f8cd6ca980bf2e3f1c44d3a64c1a20ac5f825a167f76e5c619b4e92ff4" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" default))))
+    ("7ceb8967b229c1ba102378d3e2c5fef20ec96a41f615b454e0dc0bfa1d326ea6" "38ba6a938d67a452aeb1dada9d7cdeca4d9f18114e9fc8ed2b972573138d4664" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "628278136f88aa1a151bb2d6c8a86bf2b7631fbea5f0f76cba2a0079cd910f7d" "316d29f8cd6ca980bf2e3f1c44d3a64c1a20ac5f825a167f76e5c619b4e92ff4" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" default)))
+ '(fci-rule-color "#3E3D31")
+ '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
+ '(highlight-tail-colors
+   (quote
+    (("#3E3D31" . 0)
+     ("#67930F" . 20)
+     ("#349B8D" . 30)
+     ("#21889B" . 50)
+     ("#968B26" . 60)
+     ("#A45E0A" . 70)
+     ("#A41F99" . 85)
+     ("#3E3D31" . 100))))
+ '(magit-diff-use-overlays nil)
+ '(nrepl-message-colors
+   (quote
+    ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
+ '(pos-tip-background-color "#A6E22E")
+ '(pos-tip-foreground-color "#272822")
+ '(vc-annotate-background nil)
+ '(vc-annotate-color-map
+   (quote
+    ((20 . "#F92672")
+     (40 . "#CF4F1F")
+     (60 . "#C26C0F")
+     (80 . "#E6DB74")
+     (100 . "#AB8C00")
+     (120 . "#A18F00")
+     (140 . "#989200")
+     (160 . "#8E9500")
+     (180 . "#A6E22E")
+     (200 . "#729A1E")
+     (220 . "#609C3C")
+     (240 . "#4E9D5B")
+     (260 . "#3C9F79")
+     (280 . "#A1EFE4")
+     (300 . "#299BA6")
+     (320 . "#2896B5")
+     (340 . "#2790C3")
+     (360 . "#66D9EF"))))
+ '(vc-annotate-very-old-color nil)
+ '(weechat-color-list
+   (unspecified "#272822" "#3E3D31" "#A20C41" "#F92672" "#67930F" "#A6E22E" "#968B26" "#E6DB74" "#21889B" "#66D9EF" "#A41F99" "#FD5FF0" "#349B8D" "#A1EFE4" "#F8F8F2" "#F8F8F0")))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -279,3 +336,4 @@ or region."
   :ensure t
   :defer t
   :init (smart-mode-line-enable t))
+
