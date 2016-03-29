@@ -2,9 +2,9 @@
 (require 'package)
 (setq package-enable-at-startup nil)   ; To prevent initialising twice
 (setq package-archives '(("org"       . "http://orgmode.org/elpa/")
-			 ("gnu"       . "http://elpa.gnu.org/packages/")
-			 ("melpa"     . "http://melpa.milkbox.net/packages/")
-			 ("marmalade" . "http://marmalade-repo.org/packages/")))
+                         ("gnu"       . "http://elpa.gnu.org/packages/")
+                         ("melpa"     . "http://melpa.milkbox.net/packages/")
+                         ("marmalade" . "http://marmalade-repo.org/packages/")))
 
 (package-initialize)
 
@@ -21,7 +21,50 @@
 (use-package use-package-chords
   :config (key-chord-mode 1))
 
-;; package
+(setq mac-command-modifier 'meta)
+(setq mac-option-modifier 'super)
+(setq ns-function-modifier 'hyper)
+
+(defun cleanup-buffer-safe ()
+  "Perform a bunch of safe operations on the whitespace content of a buffer.
+Does not indent buffer, because it is used for a before-save-hook, and that
+might be bad."
+  (interactive)
+  (untabify (point-min) (point-max))
+  (delete-trailing-whitespace)
+  (set-buffer-file-coding-system 'utf-8))
+
+;; Various superfluous white-space. Just say no.
+(add-hook 'before-save-hook 'cleanup-buffer-safe)
+
+(defun cleanup-buffer ()
+  "Perform a bunch of operations on the whitespace content of a buffer.
+Including indent-buffer, which should not be called automatically on save."
+  (interactive)
+  (cleanup-buffer-safe)
+  (indent-region (point-min) (point-max)))
+
+(setq
+   backup-by-copying t      ; don't clobber symlinks
+   backup-directory-alist
+    '(("." . "~/.saves"))    ; don't litter my fs tree
+   delete-old-versions t
+   kept-new-versions 6
+   kept-old-versions 2
+   version-control t)       ; use versioned backups
+
+;; packages
+
+(use-package move-text
+  :ensure t
+  :bind (("M-P" . move-text-up)
+         ("M-N" . move-text-down)))
+
+(use-package dired-details
+  :ensure t
+  :init (dired-details-install)
+  :config (setq-default dired-details-hidden-string ""))
+
 (use-package magit
   :ensure t)
 
@@ -32,6 +75,7 @@
 (use-package projectile
   :ensure t
   :init (projectile-global-mode)
+  :config (setq projectile-switch-project-action 'projectile-vc)
   :bind (("M-D" . projectile-find-file-dwim)))
 
 (use-package helm
@@ -40,7 +84,9 @@
   (setq helm-locate-command "mdfind -name %s %s")
   (helm-mode 1)
   :bind (("M-x" . helm-M-x)
-	 ("C-x C-f" . helm-for-files)))
+         ("C-x C-f" . helm-for-files)))
+(use-package window-purpose
+  :ensure)
 
 (use-package helm-projectile
   :ensure
@@ -52,6 +98,10 @@
   :ensure
   :chords ("jj" . ace-jump-mode))
 
+(use-package zoom-window
+  :ensure
+  :chords ("vv" . zoom-window-zoom))
+
 (use-package helm-swoop
   :ensure
   :bind (("M-o" . helm-swoop)))
@@ -62,21 +112,20 @@
   (smartparens-global-mode t)
   (show-smartparens-global-mode t))
 
-
 (use-package ensime
   :ensure t
   :commands ensime ensime-mode
   :config
   (add-hook 'scala-mode-hook 'ensime-mode)
   (add-hook 'scala-mode-hook 'linum-mode)
-  (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-generic-expression '(("test" "^.*\\(it.*\\).*" 1)))))
+  (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-generic-expression '(("test" "^ *\\(it .*\\)in *{" 1)))))
   (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-create-index-function (lambda () (append (imenu-default-create-index-function) (ensime-imenu-index-function))))))
   :bind (("M-ö" . ensime-company)))
 
 (use-package expand-region
   :ensure
   :bind (("M-u" . er/expand-region)
-	 ("M-i" . er/contract-region)))
+         ("M-i" . er/contract-region)))
 
 (use-package pbcopy
   :ensure
@@ -99,7 +148,7 @@
   (setq neo-smart-open t)
   (setq projectile-switch-project-action 'neotree-projectile-action)
   :bind (
-	 ("C-c n" . neotree-toggle)))
+         ("C-c n" . neotree-toggle)))
 
 (use-package popup-imenu
   :ensure
@@ -134,15 +183,15 @@
 
 ;; hippie expand is dabbrev expand on steroids
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
-					 try-expand-dabbrev-all-buffers
-					 try-expand-dabbrev-from-kill
-					 try-complete-file-name-partially
-					 try-complete-file-name
-					 try-expand-all-abbrevs
-					 try-expand-list
-					 try-expand-line
-					 try-complete-lisp-symbol-partially
-					 try-complete-lisp-symbol))
+                                         try-expand-dabbrev-all-buffers
+                                         try-expand-dabbrev-from-kill
+                                         try-complete-file-name-partially
+                                         try-complete-file-name
+                                         try-expand-all-abbrevs
+                                         try-expand-list
+                                         try-expand-line
+                                         try-complete-lisp-symbol-partially
+                                         try-complete-lisp-symbol))
 
 
 (global-set-key (kbd "M-j") 'hippie-expand)
@@ -168,6 +217,8 @@
 (setq linum-format "%7d   ")
 
 (global-set-key (kbd "M-y") 'helm-show-kill-ring)
+
+(delete-selection-mode t)
 
 (setq backup-directory-alist
       `((".*" . ,temporary-file-directory)))
@@ -209,15 +260,15 @@ When in dired mode, open file under the cursor.
 With a prefix ARG always prompt for command to use."
   (interactive "P")
   (let* ((current-file-name
-	  (if (eq major-mode 'dired-mode)
-	      (dired-get-file-for-visit)
-	    buffer-file-name))
-	 (open (pcase system-type
-		 (`darwin "open")
-		 ((or `gnu `gnu/linux `gnu/kfreebsd) "xdg-open")))
-	 (program (if (or arg (not open))
-		      (read-shell-command "Open current file with: ")
-		    open)))
+          (if (eq major-mode 'dired-mode)
+              (dired-get-file-for-visit)
+            buffer-file-name))
+         (open (pcase system-type
+                 (`darwin "open")
+                 ((or `gnu `gnu/linux `gnu/kfreebsd) "xdg-open")))
+         (program (if (or arg (not open))
+                      (read-shell-command "Open current file with: ")
+                    open)))
     (start-process "prelude-open-with-process" nil program current-file-name)))
 
 (defun prelude-duplicate-current-line-or-region (arg)
@@ -226,14 +277,14 @@ If there's no region, the current line will be duplicated.  However, if
 there's a region, all lines that region covers will be duplicated."
   (interactive "p")
   (pcase-let* ((origin (point))
-	       (`(,beg . ,end) (prelude-get-positions-of-line-or-region))
-	       (region (buffer-substring-no-properties beg end)))
+               (`(,beg . ,end) (prelude-get-positions-of-line-or-region))
+               (region (buffer-substring-no-properties beg end)))
     (-dotimes arg
       (lambda (n)
-	(goto-char end)
-	(newline)
-	(insert region)
-	(setq end (point))))
+        (goto-char end)
+        (newline)
+        (insert region)
+        (setq end (point))))
     (goto-char (+ origin (* (length region) arg) arg))))
 
 (defun prelude-get-positions-of-line-or-region ()
@@ -241,10 +292,10 @@ there's a region, all lines that region covers will be duplicated."
 or region."
   (let (beg end)
     (if (and mark-active (> (point) (mark)))
-	(exchange-point-and-mark))
+        (exchange-point-and-mark))
     (setq beg (line-beginning-position))
     (if mark-active
-	(exchange-point-and-mark))
+        (exchange-point-and-mark))
     (setq end (line-end-position))
     (cons beg end)))
 
@@ -266,6 +317,25 @@ or region."
         (message "Indented buffer.")))))
 
 
+(defun scala-test-get-test-name-at-line ()
+  (progn
+    (string-match "^ *it.*?\"\\(.*\\)\"" (thing-at-point 'line t))
+    (match-string 1 (thing-at-point 'line t))))
+
+(defun ensime-sbt-do-run-single-test ()
+  (interactive)
+  (sbt-command (format "testOnly %s -- -z \"%s\"" (ensime-top-level-class-closest-to-point) (scala-test-get-test-name-at-line))))
+
+(defun ensime-sbt-do-run-suite ()
+  (interactive)
+  (sbt-command (format "testOnly %s" (ensime-top-level-class-closest-to-point))))
+
+
+(defun ensime-sbt-do-run-testQuick-repeated ()
+  (interactive)
+  (sbt-command "testQuick"))
+
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -278,7 +348,7 @@ or region."
  '(compilation-message-face (quote default))
  '(custom-safe-themes
    (quote
-    ("7ceb8967b229c1ba102378d3e2c5fef20ec96a41f615b454e0dc0bfa1d326ea6" "38ba6a938d67a452aeb1dada9d7cdeca4d9f18114e9fc8ed2b972573138d4664" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "628278136f88aa1a151bb2d6c8a86bf2b7631fbea5f0f76cba2a0079cd910f7d" "316d29f8cd6ca980bf2e3f1c44d3a64c1a20ac5f825a167f76e5c619b4e92ff4" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" default)))
+    ("06f0b439b62164c6f8f84fdda32b62fb50b6d00e8b01c2208e55543a6337433a" "82d2cac368ccdec2fcc7573f24c3f79654b78bf133096f9b40c20d97ec1d8016" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6c62b1cd715d26eb5aa53843ed9a54fc2b0d7c5e0f5118d4efafa13d7715c56e" "8453c6ba2504874309bdfcda0a69236814cefb860a528eb978b5489422cb1791" "6c0a087a4f49c04d4002393ffd149672f70e4ab38d69bbe8b39059b61682b61c" "7ceb8967b229c1ba102378d3e2c5fef20ec96a41f615b454e0dc0bfa1d326ea6" "38ba6a938d67a452aeb1dada9d7cdeca4d9f18114e9fc8ed2b972573138d4664" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "628278136f88aa1a151bb2d6c8a86bf2b7631fbea5f0f76cba2a0079cd910f7d" "316d29f8cd6ca980bf2e3f1c44d3a64c1a20ac5f825a167f76e5c619b4e92ff4" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" default)))
  '(fci-rule-color "#3E3D31")
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
@@ -297,6 +367,7 @@ or region."
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
  '(pos-tip-background-color "#A6E22E")
  '(pos-tip-foreground-color "#272822")
+ '(purpose-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
    (quote
@@ -336,4 +407,3 @@ or region."
   :ensure t
   :defer t
   :init (smart-mode-line-enable t))
-
