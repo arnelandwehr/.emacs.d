@@ -1,6 +1,6 @@
-;; package manager
+					; package manager
 (require 'package)
-(setq package-enable-at-startup nil)   ; To prevent initialising twice
+(setq package-enable-at-startup nil)  ;; To prevent initialising twice
 (setq package-archives '(("org"       . "http://orgmode.org/elpa/")
                          ("gnu"       . "http://elpa.gnu.org/packages/")
                          ("melpa"     . "http://melpa.milkbox.net/packages/")
@@ -8,7 +8,12 @@
 
 (package-initialize)
 
-;; use-package
+(add-hook 'prog-mode-hook 'subword-mode)
+(add-hook 'prog-mode-hook 'linum-mode)
+(add-hook 'prog-mode-hook 'eldoc-mode)
+(diminish 'eldoc-mode)
+
+					; use-package
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
@@ -25,16 +30,52 @@
 (setq mac-option-modifier 'super)
 (setq ns-function-modifier 'hyper)
 
+					; (setq url-proxy-services
+					;                 '(("http"     . "localhost:8888")))
+					;(scroll-bar-mode -1)
+(tool-bar-mode -1)
+
+(set-default-font "SourceCodePro 12")
+
+					;(powerline-default-theme)
+
+(defun contextual-backspace ()
+  "Hungry whitespace or delete word depending on context."
+  (interactive)
+  (if (looking-back "[[:space:]\n]\\{2,\\}" (- (point) 2))
+      (while (looking-back "[[:space:]\n]" (- (point) 1))
+        (delete-char -1))
+    (cond
+     ((and (boundp 'smartparens-strict-mode)
+           smartparens-strict-mode)
+      (sp-backward-kill-word 1))
+     ((and (boundp 'subword-mode)
+           subword-mode)
+      (subword-backward-kill 1))
+     (t
+      (backward-kill-word 1)))))
+
+(global-set-key (kbd "M-DEL") 'contextual-backspace)
+
+(setq ring-bell-function 'ignore)
+
+(global-set-key (kbd "M-+") 'text-scale-increase)
+(global-set-key (kbd "M--") 'text-scale-decrease)
+
+
+(global-hl-line-mode t)
+
 (defun cleanup-buffer-safe ()
   "Perform a bunch of safe operations on the whitespace content of a buffer.
 Does not indent buffer, because it is used for a before-save-hook, and that
 might be bad."
   (interactive)
-  (untabify (point-min) (point-max))
+					; disabled because of go fmt
+					;  (untabify (point-min) (point-max))
   (delete-trailing-whitespace)
   (set-buffer-file-coding-system 'utf-8))
 
-;; Various superfluous white-space. Just say no.
+					; Various superfluous white-space. Just say no.
 (add-hook 'before-save-hook 'cleanup-buffer-safe)
 
 (defun cleanup-buffer ()
@@ -45,15 +86,58 @@ Including indent-buffer, which should not be called automatically on save."
   (indent-region (point-min) (point-max)))
 
 (setq
-   backup-by-copying t      ; don't clobber symlinks
-   backup-directory-alist
-    '(("." . "~/.saves"))    ; don't litter my fs tree
-   delete-old-versions t
-   kept-new-versions 6
-   kept-old-versions 2
-   version-control t)       ; use versioned backups
+ backup-by-copying t      ;don't clobber symlinks
+ backup-directory-alist
+ '(("." . "~/.saves"))    ;don't litter my fs tree
+ delete-old-versions t
+ kept-new-versions 6
+ kept-old-versions 2
+ version-control t)       ;use versioned backups
 
-;; packages
+					; packages
+
+(eval-after-load "dash" '(dash-enable-font-lock))
+
+(use-package dash-functional
+  :ensure)
+
+(use-package markdown-mode
+  :config
+  (add-hook 'markdown-mode-hook 'auto-fill-mode)
+  (add-hook 'markdown-mode-hook 'enriched-mode)
+  :ensure)
+
+(use-package org-pomodoro
+  :ensure)
+
+(use-package yasnippet
+  :ensure t
+  :diminish yas-minor-mode
+  :config
+  (yas-global-mode 1)
+  (define-key yas-minor-mode-map [(tab)]        nil)
+  (define-key yas-minor-mode-map (kbd "TAB")    nil)
+  (define-key yas-minor-mode-map (kbd "<tab>")  nil)
+  :bind (("M-J" . helm-yas-complete)
+         ("TAB" . indent-for-tab-command)))
+
+(use-package go-mode
+  :ensure t
+  :config
+  (add-hook 'before-save-hook #'gofmt-before-save)
+  (add-hook 'go-mode-hook 'flycheck-mode))
+
+(use-package flycheck
+  :ensure t)
+
+(use-package helm-c-yasnippet
+  :ensure t)
+
+(use-package company-go
+  :ensure t)
+
+(use-package helm-ag
+  :ensure t)
 
 (use-package move-text
   :ensure t
@@ -62,8 +146,9 @@ Including indent-buffer, which should not be called automatically on save."
 
 (use-package dired-details
   :ensure t
-  :init (dired-details-install)
-  :config (setq-default dired-details-hidden-string ""))
+  :config
+  (dired-details-install)
+  (setq-default dired-details-hidden-string ""))
 
 (use-package magit
   :ensure t)
@@ -72,31 +157,53 @@ Including indent-buffer, which should not be called automatically on save."
   :ensure t
   :defer t)
 
+(use-package abbrev
+  :diminish abbrev-mode
+  :config)
+
+(use-package helm-projectile
+  :ensure
+  :config
+  (helm-projectile-on)
+  (setq projectile-completion-system 'helm))
+
+(use-package writeroom-mode
+  :ensure
+  :config
+  (setq writeroom-mode-line t))
+
 (use-package projectile
   :ensure t
-  :init (projectile-global-mode)
-  :config (setq projectile-switch-project-action 'projectile-vc)
+  :config
+  (setq projectile-switch-project-action 'projectile-vc)
+  (projectile-global-mode)
   :bind (("M-D" . projectile-find-file-dwim)))
 
 (use-package helm
   :ensure
-  :init
+  :diminish helm-mode
+  :config
   (setq helm-locate-command "mdfind -name %s %s")
   (helm-mode 1)
   :bind (("M-x" . helm-M-x)
          ("C-x C-f" . helm-for-files)))
+
 (use-package window-purpose
   :ensure)
 
-(use-package helm-projectile
-  :ensure
-  :init
-  (helm-projectile-on)
-  (setq projectile-completion-system 'helm))
+(use-package etags-select
+  :ensure t
+  :commands etags-select-find-tag)
+
+(use-package helm-gtags
+  :ensure t)
 
 (use-package ace-jump-mode
   :ensure
   :chords ("jj" . ace-jump-mode))
+
+(use-package ggtags
+  :ensure t)
 
 (use-package zoom-window
   :ensure
@@ -104,10 +211,48 @@ Including indent-buffer, which should not be called automatically on save."
 
 (use-package helm-swoop
   :ensure
+  :config (setq helm-swoop-split-with-multiple-windows t)
   :bind (("M-o" . helm-swoop)))
+
+(use-package cider
+  :ensure)
+
+(autoload 'cider--make-result-overlay "cider-overlays")
+
+(use-package spaceline
+  :ensure)
+
+(require 'spaceline-config)
+(spaceline-emacs-theme)
+
+(defun endless/eval-overlay (value point)
+  (cider--make-result-overlay (format "%S" value)
+    :where point
+    :duration 'command)
+  ;; Preserve the return value.
+  value)
+
+(advice-add 'eval-region :around
+            (lambda (f beg end &rest r)
+              (endless/eval-overlay
+               (apply f beg end r)
+               end)))
+
+(advice-add 'eval-last-sexp :filter-return
+            (lambda (r)
+              (endless/eval-overlay r (point))))
+
+(advice-add 'eval-defun :filter-return
+            (lambda (r)
+              (endless/eval-overlay
+               r
+               (save-excursion
+                 (end-of-defun)
+                 (point)))))
 
 (use-package smartparens
   :ensure
+  :diminish smartparens-mode
   :config
   (smartparens-global-mode t)
   (show-smartparens-global-mode t))
@@ -116,6 +261,7 @@ Including indent-buffer, which should not be called automatically on save."
   :ensure t
   :commands ensime ensime-mode
   :config
+  (scala-mode:goto-start-of-code)
   (add-hook 'scala-mode-hook 'ensime-mode)
   (add-hook 'scala-mode-hook 'linum-mode)
   (add-hook 'ensime-mode-hook (lambda () (setq-local imenu-generic-expression '(("test" "^ *\\(it .*\\)in *{" 1)))))
@@ -129,13 +275,13 @@ Including indent-buffer, which should not be called automatically on save."
 
 (use-package pbcopy
   :ensure
-  :init (turn-on-pbcopy))
-
+  :config (turn-on-pbcopy))
 
 (use-package undo-tree
-  :defer t
   :ensure t
   :diminish undo-tree-mode
+  :bind (("M-z" . undo-tree-undo)
+	 ("M-Z" . undo-tree-redo))
   :config
   (progn
     (global-undo-tree-mode)
@@ -146,9 +292,11 @@ Including indent-buffer, which should not be called automatically on save."
   :ensure
   :config
   (setq neo-smart-open t)
+  (setq neo-window-fixed-size nil)
+  (setq neo-theme 'nerd)
+  (setq neo-vc-integration nil)
   (setq projectile-switch-project-action 'neotree-projectile-action)
-  :bind (
-         ("C-c n" . neotree-toggle)))
+  :bind (("C-c n" . neotree-toggle)))
 
 (use-package popup-imenu
   :ensure
@@ -160,8 +308,10 @@ Including indent-buffer, which should not be called automatically on save."
 
 (use-package company
   :ensure
+  :diminish company-mode
   :config
   (global-company-mode t)
+  (setq company-idle-delay 0)
   :bind (("M-ö" . company-search-candidates)))
 
 (use-package ace-window
@@ -171,7 +321,12 @@ Including indent-buffer, which should not be called automatically on save."
 
 (use-package highlight-symbol
   :ensure
+  :diminish highlight-symbol-mode
   :config (add-hook 'prog-mode-hook 'highlight-symbol-mode))
+
+(use-package powerline
+  :ensure t
+  :config (powerline-default-theme))
 
 (use-package back-button
   :ensure
@@ -180,6 +335,9 @@ Including indent-buffer, which should not be called automatically on save."
   (global-set-key (kbd "ESC <right>") 'back-button-local-forward)
   (global-set-key (kbd "ESC <up>") 'back-button-global-forward)
   (global-set-key (kbd "ESC <down>") 'back-button-global-backward))
+
+(use-package dumb-jump
+  :ensure)
 
 ;; hippie expand is dabbrev expand on steroids
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
@@ -194,7 +352,15 @@ Including indent-buffer, which should not be called automatically on save."
                                          try-complete-lisp-symbol))
 
 
-(global-set-key (kbd "M-j") 'hippie-expand)
+(global-set-key (kbd "<f2>") 'start-kbd-macro)
+(global-set-key (kbd "<f3>") 'end-kbd-macro)
+(global-set-key (kbd "<f4>") 'call-last-kbd-macro)
+
+
+;; Auto-refresh dired on file change
+(add-hook 'dired-mode-hook 'auto-revert-mode)
+
+(global-set-key(kbd "M-j") 'hippie-expand)
 
 (setq sentence-end-double-space nil)
 
@@ -214,8 +380,6 @@ Including indent-buffer, which should not be called automatically on save."
 
 (bind-chord "bb" 'helm-buffers-list)
 
-(setq linum-format "%7d   ")
-
 (global-set-key (kbd "M-y") 'helm-show-kill-ring)
 
 (delete-selection-mode t)
@@ -228,9 +392,15 @@ Including indent-buffer, which should not be called automatically on save."
 
 (global-set-key (kbd "M-e") 'helm-projectile-find-file)
 
-(global-set-key (kbd "M--") 'comment-or-uncomment-region)
+(global-set-key (kbd "M-#") 'comment-or-uncomment-region)
 
 (bind-chord "ää" 'prelude-duplicate-current-line-or-region)
+
+(add-hook 'neotree-mode-hook 'hl-line-mode)
+
+(set-default 'truncate-lines t)
+
+(setq linum-format "%5d  ")
 
 (defun smart-open-line ()
   "Insert an empty line after the current line.
@@ -240,6 +410,14 @@ Position the cursor at its beginning, according to the current mode."
   (newline-and-indent))
 
 (global-set-key (kbd "M-l") 'smart-open-line)
+
+(set-window-margins nil 30)
+
+(global-auto-revert-mode t)
+(diminish 'auto-revert-mode)
+(diminish 'auto-fill-mode)
+(diminish 'enrich-mode)
+
 
 
 (defun smart-open-line-above ()
@@ -334,22 +512,20 @@ or region."
 (defun ensime-sbt-do-run-testQuick-repeated ()
   (interactive)
   (sbt-command "testQuick"))
-
-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(ansi-color-faces-vector
-   [default default default italic underline success warning error])
+   [default bold shadow italic underline bold bold-italic bold])
  '(ansi-color-names-vector
-   ["#272822" "#F92672" "#A6E22E" "#E6DB74" "#66D9EF" "#FD5FF0" "#A1EFE4" "#F8F8F2"])
+   (vector "#c5c8c6" "#cc6666" "#b5bd68" "#f0c674" "#81a2be" "#b294bb" "#8abeb7" "#1d1f21"))
  '(compilation-message-face (quote default))
  '(custom-safe-themes
    (quote
-    ("06f0b439b62164c6f8f84fdda32b62fb50b6d00e8b01c2208e55543a6337433a" "82d2cac368ccdec2fcc7573f24c3f79654b78bf133096f9b40c20d97ec1d8016" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "6c62b1cd715d26eb5aa53843ed9a54fc2b0d7c5e0f5118d4efafa13d7715c56e" "8453c6ba2504874309bdfcda0a69236814cefb860a528eb978b5489422cb1791" "6c0a087a4f49c04d4002393ffd149672f70e4ab38d69bbe8b39059b61682b61c" "7ceb8967b229c1ba102378d3e2c5fef20ec96a41f615b454e0dc0bfa1d326ea6" "38ba6a938d67a452aeb1dada9d7cdeca4d9f18114e9fc8ed2b972573138d4664" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" "1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "628278136f88aa1a151bb2d6c8a86bf2b7631fbea5f0f76cba2a0079cd910f7d" "316d29f8cd6ca980bf2e3f1c44d3a64c1a20ac5f825a167f76e5c619b4e92ff4" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" default)))
- '(fci-rule-color "#3E3D31")
+    ("5d5bc275d76f782fcb4ca2f3394031f4a491820fd648aed5c51efc15d472562e" "fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" "82d2cac368ccdec2fcc7573f24c3f79654b78bf133096f9b40c20d97ec1d8016" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "613a7c50dbea57860eae686d580f83867582ffdadd63f0f3ebe6a85455ab7706" "a1289424bbc0e9f9877aa2c9a03c7dfd2835ea51d8781a0bf9e2415101f70a7e" "628278136f88aa1a151bb2d6c8a86bf2b7631fbea5f0f76cba2a0079cd910f7d" "f3d6a49e3f4491373028eda655231ec371d79d6d2a628f08d5aa38739340540b" "1b8d67b43ff1723960eb5e0cba512a2c7a2ad544ddb2533a90101fd1852b426e" "06f0b439b62164c6f8f84fdda32b62fb50b6d00e8b01c2208e55543a6337433a" "6c62b1cd715d26eb5aa53843ed9a54fc2b0d7c5e0f5118d4efafa13d7715c56e" default)))
+ '(fci-rule-color "#373b41")
  '(highlight-changes-colors (quote ("#FD5FF0" "#AE81FF")))
  '(highlight-tail-colors
    (quote
@@ -367,28 +543,28 @@ or region."
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
  '(pos-tip-background-color "#A6E22E")
  '(pos-tip-foreground-color "#272822")
- '(purpose-mode t)
+ '(powerline-height 20)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
    (quote
-    ((20 . "#F92672")
-     (40 . "#CF4F1F")
-     (60 . "#C26C0F")
-     (80 . "#E6DB74")
-     (100 . "#AB8C00")
-     (120 . "#A18F00")
-     (140 . "#989200")
-     (160 . "#8E9500")
-     (180 . "#A6E22E")
-     (200 . "#729A1E")
-     (220 . "#609C3C")
-     (240 . "#4E9D5B")
-     (260 . "#3C9F79")
-     (280 . "#A1EFE4")
-     (300 . "#299BA6")
-     (320 . "#2896B5")
-     (340 . "#2790C3")
-     (360 . "#66D9EF"))))
+    ((20 . "#cc6666")
+     (40 . "#de935f")
+     (60 . "#f0c674")
+     (80 . "#b5bd68")
+     (100 . "#8abeb7")
+     (120 . "#81a2be")
+     (140 . "#b294bb")
+     (160 . "#cc6666")
+     (180 . "#de935f")
+     (200 . "#f0c674")
+     (220 . "#b5bd68")
+     (240 . "#8abeb7")
+     (260 . "#81a2be")
+     (280 . "#b294bb")
+     (300 . "#cc6666")
+     (320 . "#de935f")
+     (340 . "#f0c674")
+     (360 . "#b5bd68"))))
  '(vc-annotate-very-old-color nil)
  '(weechat-color-list
    (unspecified "#272822" "#3E3D31" "#A20C41" "#F92672" "#67930F" "#A6E22E" "#968B26" "#E6DB74" "#21889B" "#66D9EF" "#A41F99" "#FD5FF0" "#349B8D" "#A1EFE4" "#F8F8F2" "#F8F8F0")))
@@ -397,13 +573,23 @@ or region."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ '(neo-expand-btn-face ((t (:background "color-236" :foreground "#5fafd7")))))
 
-;; load themes after they are marked as safe
-(load-theme 'zenburn)
-(load-theme 'smart-mode-line-light)
 
-(use-package smart-mode-line
-  :ensure t
-  :defer t
-  :init (smart-mode-line-enable t))
+(load-theme 'spacemacs-dark)
+
+
+;; ------------------------------
+
+(defun buffer-dir-name ()
+  (-when-let (file buffer-file-name)
+    (file-name-directory file)))
+
+(defun update-neotree ()
+  (interactive)
+  (let ((current (current-buffer)))
+    (-when-let (file (buffer-file-name))
+      (neo-global--open-and-find file))
+    (hl-line-highlight)
+    (switch-to-buffer current)))
+(put 'downcase-region 'disabled nil)
