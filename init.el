@@ -104,7 +104,6 @@ Including indent-buffer, which should not be called automatically on save."
 (use-package markdown-mode
   :config
   (add-hook 'markdown-mode-hook 'auto-fill-mode)
-  (add-hook 'markdown-mode-hook 'enriched-mode)
   :ensure)
 
 (use-package org-pomodoro
@@ -178,6 +177,9 @@ Including indent-buffer, which should not be called automatically on save."
   (setq projectile-switch-project-action 'projectile-vc)
   (projectile-global-mode)
   :bind (("M-D" . projectile-find-file-dwim)))
+
+(use-package fstar-mode
+  :ensure t)
 
 (use-package helm
   :ensure
@@ -339,6 +341,13 @@ Including indent-buffer, which should not be called automatically on save."
 (use-package dumb-jump
   :ensure)
 
+(use-package imenu+
+  :ensure)
+
+(use-package imenu-list
+  :bind (("C-c s" . imenu-list))
+  :ensure)
+
 ;; hippie expand is dabbrev expand on steroids
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
                                          try-expand-dabbrev-all-buffers
@@ -356,6 +365,15 @@ Including indent-buffer, which should not be called automatically on save."
 (global-set-key (kbd "<f3>") 'end-kbd-macro)
 (global-set-key (kbd "<f4>") 'call-last-kbd-macro)
 
+
+;; dired
+
+(defun open-with-app ()
+  (interactive)
+  (dired-do-shell-command "open" -1 (dired-get-marked-files)))
+
+(add-hook 'dired-mode-hook
+          (lambda () (local-set-key (kbd "M-RET") 'open-with-app)))
 
 ;; Auto-refresh dired on file change
 (add-hook 'dired-mode-hook 'auto-revert-mode)
@@ -541,6 +559,7 @@ or region."
  '(nrepl-message-colors
    (quote
     ("#CC9393" "#DFAF8F" "#F0DFAF" "#7F9F7F" "#BFEBBF" "#93E0E3" "#94BFF3" "#DC8CC3")))
+ '(org-agenda-files (quote ("~/org/todo.org")))
  '(pos-tip-background-color "#A6E22E")
  '(pos-tip-foreground-color "#272822")
  '(powerline-height 20)
